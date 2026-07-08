@@ -6,7 +6,7 @@ pkgdesc="Rofi frontend for password-store (pass)"
 arch=('x86_64' 'aarch64')
 url="https://github.com/njkevlani/gopassrofi"
 license=('MIT')
-depends=('rofi' 'pass')
+depends=('rofi' 'pass' 'which')
 provides=('gopassrofi')
 conflicts=('gopassrofi')
 
