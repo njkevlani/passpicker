@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=gopassrofi
-Comment=Rofi frontend for password-store
-Exec=gopassrofi
+Name=Pass Picker
+Comment=Menu-driven frontend for password-store
+Exec=passpicker
 Icon=dialog-password
 Terminal=false
 Type=Application

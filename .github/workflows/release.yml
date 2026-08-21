@@ -31,13 +31,13 @@ jobs:
 
       - name: Build binary
         run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "passpicker-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: passpicker-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: passpicker-${{ matrix.goos }}-${{ matrix.goarch }}
 
   release:
     name: Create release assets
@@ -48,7 +48,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: gopassrofi-*
+          pattern: passpicker-*
           merge-multiple: true
           path: dist
 
@@ -56,9 +56,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/gopassrofi-linux-amd64
-            dist/gopassrofi-linux-arm64
-            dist/gopassrofi-darwin-amd64
-            dist/gopassrofi-darwin-arm64
+            dist/passpicker-linux-amd64
+            dist/passpicker-linux-arm64
+            dist/passpicker-darwin-amd64
+            dist/passpicker-darwin-arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

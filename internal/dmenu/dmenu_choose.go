@@ -49,7 +49,7 @@ func dialogInput(prompt, defaultVal string, hidden bool) (string, error) {
 		hiddenClause = " with hidden answer"
 	}
 	script := fmt.Sprintf(`on run argv
-	set r to display dialog (item 1 of argv) default answer (item 2 of argv)%s with title "gopassrofi"
+	set r to display dialog (item 1 of argv) default answer (item 2 of argv)%s with title "Pass Picker"
 	return text returned of r
 end run`, hiddenClause)
 
@@ -71,7 +71,7 @@ end run`, hiddenClause)
 // ShowMessage displays a pop-up dialog with the given message.
 func ShowMessage(msg string) error {
 	script := `on run argv
-	display dialog (item 1 of argv) buttons {"OK"} default button 1 with title "gopassrofi"
+	display dialog (item 1 of argv) buttons {"OK"} default button 1 with title "Pass Picker"
 end run`
 	return exec.Command("osascript", "-e", script, msg).Run()
 }

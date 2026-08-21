@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>gopassrofi</string>
+	<string>Pass Picker</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.github.njkevlani.gopassrofi</string>
+	<string>com.github.njkevlani.passpicker</string>
 	<key>CFBundleExecutable</key>
-	<string>gopassrofi</string>
+	<string>passpicker</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

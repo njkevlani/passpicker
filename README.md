@@ -1,4 +1,4 @@
-# gopassrofi
+# passpicker
 
 A Golang-based tool that integrates the standard Unix Password Store (`pass`) with a graphical launcher to provide a rich, interactive graphical password manager: `rofi` (in `dmenu` mode) on Linux, [`choose`](https://github.com/chipsenkbeil/choose) on macOS.
 
@@ -37,32 +37,32 @@ A Golang-based tool that integrates the standard Unix Password Store (`pass`) wi
 Initialize the module and compile the binary:
 
 ```bash
-go build -o gopassrofi main.go
+go build -o passpicker main.go
 ```
 
-This will produce a `gopassrofi` executable in the root directory.
+This will produce a `passpicker` executable in the root directory.
 
 ## Usage
 
 Run the compiled binary:
 
 ```bash
-./gopassrofi
+./passpicker
 ```
 
 ### Integration with Window Managers
 
-To assign `gopassrofi` to a global hotkey, add a configuration to your window manager:
+To assign `passpicker` to a global hotkey, add a configuration to your window manager:
 
 #### i3wm / Sway
 ```i3
-bindsym $mod+p exec --no-startup-id /path/to/gopassrofi
+bindsym $mod+p exec --no-startup-id /path/to/passpicker
 ```
 
 #### sxhkd
 ```sxhkdrc
 super + p
-    /path/to/gopassrofi
+    /path/to/passpicker
 ```
 
 #### macOS
@@ -70,8 +70,8 @@ super + p
 Install the binary somewhere on your `PATH`, then install the launcher app bundle:
 
 ```bash
-go build -o ~/.local/bin/gopassrofi main.go
-cp -R resources/gopassrofi.app /Applications/
+go build -o ~/.local/bin/passpicker main.go
+cp -R "resources/Pass Picker.app" /Applications/
 ```
 GPG needs a graphical pinentry to unlock the key from a GUI launch: `brew install pinentry-mac`
 and add `pinentry-program /opt/homebrew/bin/pinentry-mac` to `~/.gnupg/gpg-agent.conf`.
@@ -79,11 +79,11 @@ and add `pinentry-program /opt/homebrew/bin/pinentry-mac` to `~/.gnupg/gpg-agent
 ## Project Structure
 
 - `internal/pass/`: Handles interacting with the `pass` CLI, parsing the output tree, and managing passwords/OTPs.
-  - [pass.go](file:///home/njkevlani/git/gopassrofi/internal/pass/pass.go): Exported library APIs.
-  - [parser.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser.go): Tree-parsing functions.
-  - [parser_test.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser_test.go): Tests for parser correctness.
+  - [pass.go](file:///home/njkevlani/git/passpicker/internal/pass/pass.go): Exported library APIs.
+  - [parser.go](file:///home/njkevlani/git/passpicker/internal/pass/parser.go): Tree-parsing functions.
+  - [parser_test.go](file:///home/njkevlani/git/passpicker/internal/pass/parser_test.go): Tests for parser correctness.
 - `internal/dmenu/`: Wraps menu execution and inputs. Same API per platform, selected by build tag.
   - `dmenu.go`: Shared `Result`/`ActionType` types and query-suffix parsing.
   - `dmenu_rofi.go`: `rofi` implementation (non-darwin).
   - `dmenu_choose.go`: `choose` + `osascript` implementation (darwin).
-- [main.go](file:///home/njkevlani/git/gopassrofi/main.go): Core orchestrator loop.
+- [main.go](file:///home/njkevlani/git/passpicker/main.go): Core orchestrator loop.
