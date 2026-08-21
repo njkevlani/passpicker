@@ -1,14 +1,17 @@
 # gopassrofi
 
-A Golang-based tool that integrates the standard Unix Password Store (`pass`) with `rofi` (in `dmenu` mode) to provide a rich, interactive graphical password manager.
+A Golang-based tool that integrates the standard Unix Password Store (`pass`) with a graphical launcher to provide a rich, interactive graphical password manager: `rofi` (in `dmenu` mode) on Linux, [`choose`](https://github.com/chipsenkbeil/choose) on macOS.
 
 ## Features
 
 - **Select Passwords**: Fuzzy search and select your passwords using `rofi`.
-- **Keyboard Shortcuts**:
+- **Keyboard Shortcuts** (Linux):
   - `Enter`: Copies the password to the clipboard (and clears it after 45 seconds).
   - `Alt + Enter`: Copies the 2FA OTP code to the clipboard (using `pass otp`).
   - `Ctrl + Enter`: Displays the **Other Options** submenu.
+- **macOS**: `choose` has no custom key bindings, so `Enter` on an entry opens the
+  **Other Options** submenu (`Copy Password` is the first item, so `Enter`, `Enter` copies).
+  As a shortcut, typing `<entry> !otp` copies the OTP in one step.
 - **Other Options Submenu**:
   - Copy Password
   - Copy OTP
@@ -27,9 +30,11 @@ A Golang-based tool that integrates the standard Unix Password Store (`pass`) wi
 ### Prerequisites
 
 1. **Golang**: Ensure Go is installed (version 1.16+ recommended).
-2. **Password Store**: Make sure `pass` is installed and initialized.
-3. **Rofi**: Ensure `rofi` is installed.
-4. **Notify Send**: (Optional) For desktop notifications.
+2. **Password Store**: Make sure `pass` is installed and initialized (plus `pass-otp` for OTP support).
+3. **Menu**:
+   - Linux: `rofi`.
+   - macOS: `brew install choose-gui`. Dialogs and notifications use the built-in `osascript`.
+4. **Notify Send**: (Linux, optional) For desktop notifications.
 
 ### Building
 
@@ -64,12 +69,25 @@ super + p
     /path/to/gopassrofi
 ```
 
+#### macOS
+
+Install the binary somewhere on your `PATH`, then install the launcher app bundle:
+
+```bash
+go build -o ~/.local/bin/gopassrofi main.go
+cp -R resources/gopassrofi.app /Applications/
+```
+GPG needs a graphical pinentry to unlock the key from a GUI launch: `brew install pinentry-mac`
+and add `pinentry-program /opt/homebrew/bin/pinentry-mac` to `~/.gnupg/gpg-agent.conf`.
+
 ## Project Structure
 
 - `internal/pass/`: Handles interacting with the `pass` CLI, parsing the output tree, and managing passwords/OTPs.
   - [pass.go](file:///home/njkevlani/git/gopassrofi/internal/pass/pass.go): Exported library APIs.
   - [parser.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser.go): Tree-parsing functions.
   - [parser_test.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser_test.go): Tests for parser correctness.
-- `internal/dmenu/`: Wraps `rofi` execution and inputs.
-  - [dmenu.go](file:///home/njkevlani/git/gopassrofi/internal/dmenu/dmenu.go): Dmenu display, inputs, messages, and notifications.
+- `internal/dmenu/`: Wraps menu execution and inputs. Same API per platform, selected by build tag.
+  - `dmenu.go`: Shared `Result`/`ActionType` types.
+  - `dmenu_rofi.go`: `rofi` implementation (non-darwin).
+  - `dmenu_choose.go`: `choose` + `osascript` implementation (darwin).
 - [main.go](file:///home/njkevlani/git/gopassrofi/main.go): Core orchestrator loop.

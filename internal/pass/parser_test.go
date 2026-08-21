@@ -35,3 +35,31 @@ func TestParseTree(t *testing.T) {
 		t.Errorf("Expected:\n%v\nGot:\n%v", expected, result)
 	}
 }
+
+// tree(1) drops to ASCII line drawing without a UTF-8 locale (GUI launches).
+func TestParseTreeASCII(t *testing.T) {
+	input := `Password Store
+|-- personal
+|   |-- actcorp.in
+|   |   ` + "`" + `-- 102701828364
+|   |-- cashkro
+|   ` + "`" + `-- equitas.bank.in
+|       ` + "`" + `-- njkevlani
+` + "`" + `-- sharechat
+    |-- google.com
+    |   ` + "`" + `-- nileshkevlani@sharechat.co
+    ` + "`" + `-- smartworks`
+
+	expected := []string{
+		"personal/actcorp.in/102701828364",
+		"personal/cashkro",
+		"personal/equitas.bank.in/njkevlani",
+		"sharechat/google.com/nileshkevlani@sharechat.co",
+		"sharechat/smartworks",
+	}
+
+	result := parseTree(input)
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected:\n%v\nGot:\n%v", expected, result)
+	}
+}

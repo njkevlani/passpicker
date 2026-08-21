@@ -11,15 +11,12 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }}
+    name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - arch: arm64
-            goarch: arm64
-          - arch: amd64
-            goarch: amd64
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,13 +31,13 @@ jobs:
 
       - name: Build binary
         run: |
-          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o "gopassrofi-linux-${{ matrix.arch }}" main.go
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gopassrofi-${{ matrix.arch }}
-          path: gopassrofi-linux-${{ matrix.arch }}
+          name: gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: gopassrofi-${{ matrix.goos }}-${{ matrix.goarch }}
 
   release:
     name: Create release assets
@@ -61,5 +58,7 @@ jobs:
           files: |
             dist/gopassrofi-linux-amd64
             dist/gopassrofi-linux-arm64
+            dist/gopassrofi-darwin-amd64
+            dist/gopassrofi-darwin-arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

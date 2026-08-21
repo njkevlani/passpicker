@@ -95,7 +95,9 @@ func parseTree(output string) []string {
 
 func isTreeRune(r rune) bool {
 	switch r {
-	case '│', '├', '─', '└', ' ', '\u00a0':
+	// tree(1) falls back to ASCII line drawing when the locale is not UTF-8
+	// (e.g. GUI launches, where LANG is unset).
+	case '│', '├', '─', '└', '|', '`', '-', ' ', '\u00a0':
 		return true
 	default:
 		return false

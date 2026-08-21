@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -88,32 +89,39 @@ func GeneratePassword(name string, length int) (string, error) {
 	return GetPassword(name)
 }
 
-// CopyPassword copies the password to the clipboard using pass show -c asynchronously.
-// If notifyTitle is not empty, it will display a desktop notification using notify-send after the copy finishes.
-func CopyPassword(name string, notifyTitle, notifyBody string) error {
-	var script string
-	if notifyTitle != "" {
-		script = fmt.Sprintf("pass show -c %q && notify-send %q %q", name, notifyTitle, notifyBody)
-	} else {
-		script = fmt.Sprintf("pass show -c %q", name)
+// notifyArgv returns the argv of a command that fires a desktop notification.
+func notifyArgv(title, body string) []string {
+	if runtime.GOOS == "darwin" {
+		script := "on run argv\n\tdisplay notification (item 1 of argv) with title (item 2 of argv)\nend run"
+		return []string{"osascript", "-e", script, body, title}
 	}
-	cmd := exec.Command("sh", "-c", script)
+	return []string{"notify-send", title, body}
+}
+
+// copyToClipboard runs 'pass <verb> -c <name>' detached, then notifies on success.
+// Detaching matters: gpg may block on a pinentry prompt after the menu is gone.
+func copyToClipboard(verb, name, notifyTitle, notifyBody string) error {
+	// Args are passed positionally so entry names never get shell-interpreted.
+	args := []string{"-c", "pass \"$1\" -c \"$2\" || exit 1; shift 2; [ $# -eq 0 ] || exec \"$@\"", "sh", verb, name}
+	if notifyTitle != "" {
+		args = append(args, notifyArgv(notifyTitle, notifyBody)...)
+	}
+
+	cmd := exec.Command("sh", args...)
 	cmd.Env = append(os.Environ(), "PASSWORD_STORE_GPG_OPTS=--trust-model always")
 	return cmd.Start()
 }
 
-// CopyOTP copies the OTP to the clipboard using pass otp -c asynchronously.
-// If notifyTitle is not empty, it will display a desktop notification using notify-send after the copy finishes.
+// CopyPassword copies the password to the clipboard asynchronously.
+// If notifyTitle is not empty, a desktop notification is shown after the copy finishes.
+func CopyPassword(name string, notifyTitle, notifyBody string) error {
+	return copyToClipboard("show", name, notifyTitle, notifyBody)
+}
+
+// CopyOTP copies the OTP to the clipboard asynchronously.
+// If notifyTitle is not empty, a desktop notification is shown after the copy finishes.
 func CopyOTP(name string, notifyTitle, notifyBody string) error {
-	var script string
-	if notifyTitle != "" {
-		script = fmt.Sprintf("pass otp -c %q && notify-send %q %q", name, notifyTitle, notifyBody)
-	} else {
-		script = fmt.Sprintf("pass otp -c %q", name)
-	}
-	cmd := exec.Command("sh", "-c", script)
-	cmd.Env = append(os.Environ(), "PASSWORD_STORE_GPG_OPTS=--trust-model always")
-	return cmd.Start()
+	return copyToClipboard("otp", name, notifyTitle, notifyBody)
 }
 
 // DeletePassword deletes the password entry.
@@ -121,5 +129,3 @@ func DeletePassword(name string) error {
 	_, err := runPassCmd([]string{"rm", "-f", name}, "")
 	return err
 }
-
-
