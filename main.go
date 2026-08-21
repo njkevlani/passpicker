@@ -58,31 +58,17 @@ func main() {
 		}
 
 		// Existing password selected.
-		// Without custom key bindings, Enter opens the options menu instead of
-		// copying, so Copy OTP and friends stay reachable.
-		if !dmenu.CustomKeys && res.Action == dmenu.ActionAccept {
-			res.Action = dmenu.ActionCustom2
-		}
-
 		switch res.Action {
-		case dmenu.ActionAccept: // Enter -> Copy Password
-			err := pass.CopyPassword(res.Selection, "gopassrofi", fmt.Sprintf("Password for '%s' copied to clipboard!", res.Selection))
-			if err != nil {
-				_ = dmenu.ShowMessage(fmt.Sprintf("Error copying password: %v", err))
-			} else {
+		case dmenu.ActionAccept: // Enter -> Other Options
+			if showOtherOptions(res.Selection) {
 				return
 			}
 
-		case dmenu.ActionCustom1: // Alt+Enter -> Copy OTP
+		case dmenu.ActionCustom1: // "<entry> !otp" -> Copy OTP
 			err := pass.CopyOTP(res.Selection, "gopassrofi", fmt.Sprintf("OTP for '%s' copied to clipboard!", res.Selection))
 			if err != nil {
 				_ = dmenu.ShowMessage(fmt.Sprintf("Error copying OTP: %v", err))
 			} else {
-				return
-			}
-
-		case dmenu.ActionCustom2: // Ctrl+Enter -> Other Options
-			if showOtherOptions(res.Selection) {
 				return
 			}
 		}

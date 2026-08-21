@@ -9,16 +9,6 @@ import (
 	"strings"
 )
 
-// choose has no custom key bindings, so the OTP shortcut is typed as a suffix on
-// the query instead (choose -m returns the raw query when nothing matches).
-// ponytail: text suffix instead of a modifier key, revisit if choose ever grows -kb-custom.
-var suffixActions = map[string]ActionType{
-	" !otp": ActionCustom1,
-}
-
-// CustomKeys reports whether the menu can bind Alt+Enter / Ctrl+Enter to extra actions.
-const CustomKeys = false
-
 // ShowMenu displays a choose(1) menu with the given prompt and items.
 // Typing "<entry> !otp" copies the OTP directly.
 func ShowMenu(prompt string, items []string, message string) (Result, error) {
@@ -41,22 +31,6 @@ func ShowMenu(prompt string, items []string, message string) (Result, error) {
 	}
 
 	return parseSelection(stdout.String()), nil
-}
-
-// parseSelection turns choose's output into a Result, peeling off any action suffix.
-func parseSelection(out string) Result {
-	selection := strings.TrimSpace(out)
-	if selection == "" {
-		return Result{Action: ActionCancel}
-	}
-
-	for suffix, action := range suffixActions {
-		if strings.HasSuffix(selection, suffix) {
-			return Result{Selection: strings.TrimSpace(strings.TrimSuffix(selection, suffix)), Action: action}
-		}
-	}
-
-	return Result{Selection: selection, Action: ActionAccept}
 }
 
 // ShowPasswordPrompt displays a hidden-answer input dialog.

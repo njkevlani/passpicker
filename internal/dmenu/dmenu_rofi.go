@@ -9,18 +9,13 @@ import (
 	"strings"
 )
 
-// CustomKeys reports whether the menu can bind Alt+Enter / Ctrl+Enter to extra actions.
-const CustomKeys = true
-
 // ShowMenu displays a rofi dmenu with the given prompt and items.
-// It maps Alt+Enter to ActionCustom1 and Ctrl+Enter to ActionCustom2.
+// Enter is the only action; typing "<entry> !otp" copies the OTP directly.
 func ShowMenu(prompt string, items []string, message string) (Result, error) {
 	cmd := exec.Command("rofi",
 		"-dmenu",
 		"-p", prompt,
-		"-kb-accept-custom", "", // Clear Control+Return default binding to avoid conflicts
-		"-kb-custom-1", "Alt+Return",
-		"-kb-custom-2", "Control+Return",
+		"-kb-accept-custom", "", // Clear Control+Return so Return is the only accept key
 		"-i", // Case-insensitive matching
 	)
 
@@ -44,26 +39,14 @@ func ShowMenu(prompt string, items []string, message string) (Result, error) {
 		}
 	}
 
-	selection := strings.TrimSpace(stdout.String())
-
-	var action ActionType
 	switch exitCode {
 	case 0:
-		action = ActionAccept
+		return parseSelection(stdout.String()), nil
 	case 1:
-		action = ActionCancel
-	case 10:
-		action = ActionCustom1
-	case 11:
-		action = ActionCustom2
+		return Result{Action: ActionCancel}, nil
 	default:
 		return Result{}, fmt.Errorf("rofi exited with unexpected code %d (stderr: %q)", exitCode, stderr.String())
 	}
-
-	return Result{
-		Selection: selection,
-		Action:    action,
-	}, nil
 }
 
 // ShowPasswordPrompt displays a rofi password-hidden input field.

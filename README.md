@@ -5,12 +5,8 @@ A Golang-based tool that integrates the standard Unix Password Store (`pass`) wi
 ## Features
 
 - **Select Passwords**: Fuzzy search and select your passwords using `rofi`.
-- **Keyboard Shortcuts** (Linux):
-  - `Enter`: Copies the password to the clipboard (and clears it after 45 seconds).
-  - `Alt + Enter`: Copies the 2FA OTP code to the clipboard (using `pass otp`).
-  - `Ctrl + Enter`: Displays the **Other Options** submenu.
-- **macOS**: `choose` has no custom key bindings, so `Enter` on an entry opens the
-  **Other Options** submenu (`Copy Password` is the first item, so `Enter`, `Enter` copies).
+- `Enter` on an entry opens the **Other Options**
+  submenu (`Copy Password` is the first item, so `Enter`, `Enter` copies).
   As a shortcut, typing `<entry> !otp` copies the OTP in one step.
 - **Other Options Submenu**:
   - Copy Password
@@ -87,7 +83,7 @@ and add `pinentry-program /opt/homebrew/bin/pinentry-mac` to `~/.gnupg/gpg-agent
   - [parser.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser.go): Tree-parsing functions.
   - [parser_test.go](file:///home/njkevlani/git/gopassrofi/internal/pass/parser_test.go): Tests for parser correctness.
 - `internal/dmenu/`: Wraps menu execution and inputs. Same API per platform, selected by build tag.
-  - `dmenu.go`: Shared `Result`/`ActionType` types.
+  - `dmenu.go`: Shared `Result`/`ActionType` types and query-suffix parsing.
   - `dmenu_rofi.go`: `rofi` implementation (non-darwin).
   - `dmenu_choose.go`: `choose` + `osascript` implementation (darwin).
 - [main.go](file:///home/njkevlani/git/gopassrofi/main.go): Core orchestrator loop.
