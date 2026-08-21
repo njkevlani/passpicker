@@ -45,6 +45,9 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -62,3 +65,23 @@ jobs:
             dist/passpicker-darwin-arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Render AUR PKGBUILD
+        run: |
+          sha() { sha256sum "$1" | cut -d' ' -f1; }
+          sed -e "s|@VERSION@|${GITHUB_REF_NAME#v}|" \
+              -e "s|@SHA_LICENSE@|$(sha LICENSE)|" \
+              -e "s|@SHA_DESKTOP@|$(sha resources/passpicker.desktop)|" \
+              -e "s|@SHA_X86_64@|$(sha dist/passpicker-linux-amd64)|" \
+              -e "s|@SHA_AARCH64@|$(sha dist/passpicker-linux-arm64)|" \
+              packaging/aur/PKGBUILD > PKGBUILD
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.2.0
+        with:
+          pkgname: passpicker-bin
+          pkgbuild: ./PKGBUILD
+          commit_username: njkevlani
+          commit_email: njkevlani@gmail.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: ${{ github.ref_name }}

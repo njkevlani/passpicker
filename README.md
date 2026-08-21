@@ -32,6 +32,11 @@ A Golang-based tool that integrates the standard Unix Password Store (`pass`) wi
    - macOS: `brew install choose-gui`. Dialogs and notifications use the built-in `osascript`.
 4. **Notify Send**: (Linux, optional) For desktop notifications.
 
+### Arch Linux (AUR)
+
+```bash
+paru -S passpicker-bin   # or: yay -S passpicker-bin
+```
 ### Building
 
 Initialize the module and compile the binary:
