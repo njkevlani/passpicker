@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ func ShowMenu(prompt string, items []string, message string) (Result, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := run(cmd); err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			return Result{}, fmt.Errorf("failed to run choose: %w (stderr: %q)", err, stderr.String())
 		}
@@ -49,6 +50,7 @@ func dialogInput(prompt, defaultVal string, hidden bool) (string, error) {
 		hiddenClause = " with hidden answer"
 	}
 	script := fmt.Sprintf(`on run argv
+	activate
 	set r to display dialog (item 1 of argv) default answer (item 2 of argv)%s with title "Pass Picker"
 	return text returned of r
 end run`, hiddenClause)
@@ -58,7 +60,7 @@ end run`, hiddenClause)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := run(cmd); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			return "", nil // User cancelled
 		}
@@ -71,6 +73,7 @@ end run`, hiddenClause)
 // ShowMessage displays a pop-up dialog with the given message.
 func ShowMessage(msg string) error {
 	script := `on run argv
+	activate
 	display dialog (item 1 of argv) buttons {"OK"} default button 1 with title "Pass Picker"
 end run`
 	return exec.Command("osascript", "-e", script, msg).Run()
@@ -89,4 +92,28 @@ func NotifyArgv(title, body string) []string {
 func NotifySend(title, body string) {
 	argv := NotifyArgv(title, body)
 	_ = exec.Command(argv[0], argv[1:]...).Run()
+}
+
+// activateScript brings a pid to the front. choose is a bare Mach-O NSApplication
+// with no bundle, so LaunchServices never gives it activation when it is spawned
+// from a background process (an app launched from Finder, Spotlight or a hotkey).
+// NSRunningApplication needs no Accessibility permission, unlike System Events.
+const activateScript = `ObjC.import('AppKit');
+function run(argv) {
+	var app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(parseInt(argv[0]));
+	// The window does not exist the instant the process starts, so keep trying briefly.
+	for (var i = 0; i < 20 && app && !app.isActive; i++) {
+		app.activateWithOptions(2); // NSApplicationActivateIgnoringOtherApps
+		$.NSThread.sleepForTimeInterval(0.05);
+	}
+}`
+
+// run starts cmd, pulls its window to the front, and waits for it to exit.
+func run(cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	_ = exec.Command("osascript", "-l", "JavaScript", "-e", activateScript,
+		strconv.Itoa(cmd.Process.Pid)).Run()
+	return cmd.Wait()
 }
