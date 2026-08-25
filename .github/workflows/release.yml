@@ -11,11 +11,10 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
+    name: Build linux-${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin]
         goarch: [amd64, arm64]
     steps:
       - name: Checkout
@@ -31,20 +30,55 @@ jobs:
 
       - name: Build binary
         run: |
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.goarch }} \
             go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" \
-              -o "passpicker-${{ matrix.goos }}-${{ matrix.goarch }}" main.go
+              -o "passpicker-linux-${{ matrix.goarch }}" main.go
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: passpicker-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: passpicker-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: passpicker-linux-${{ matrix.goarch }}
+          path: passpicker-linux-${{ matrix.goarch }}
+
+  dmg:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build darwin binaries
+        run: |
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=darwin GOARCH="$arch" \
+              go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" \
+                -o "passpicker-darwin-$arch" main.go
+          done
+
+      - name: Build DMG
+        run: |
+          case "$GITHUB_REF_NAME" in
+            v*) VERSION="${GITHUB_REF_NAME#v}" ;;
+            *)  VERSION="" ;;
+          esac
+          VERSION="$VERSION" packaging/macos/build-dmg.sh \
+            passpicker-darwin-amd64 passpicker-darwin-arm64 passpicker-macos.dmg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: passpicker-macos-dmg
+          path: passpicker-macos.dmg
 
   release:
     name: Create release assets
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, dmg]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
@@ -63,8 +97,7 @@ jobs:
           files: |
             dist/passpicker-linux-amd64
             dist/passpicker-linux-arm64
-            dist/passpicker-darwin-amd64
-            dist/passpicker-darwin-arm64
+            dist/passpicker-macos.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

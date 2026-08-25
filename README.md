@@ -72,12 +72,10 @@ super + p
 
 #### macOS
 
-Install the binary somewhere on your `PATH`, then install the launcher app bundle:
+Download `passpicker-macos.dmg` from the [releases page](https://github.com/njkevlani/passpicker/releases),
+open it, and drag **Pass Picker** to Applications. The runtime dependencies 
+above (`pass`, `gpg`, `choose`) are to be installed from Homebrew.
 
-```bash
-go build -o ~/.local/bin/passpicker main.go
-cp -R "resources/Pass Picker.app" /Applications/
-```
 GPG needs a graphical pinentry to unlock the key from a GUI launch: `brew install pinentry-mac`
 and add `pinentry-program /opt/homebrew/bin/pinentry-mac` to `~/.gnupg/gpg-agent.conf`.
 

@@ -94,14 +94,13 @@ func NotifySend(title, body string) {
 	_ = exec.Command(argv[0], argv[1:]...).Run()
 }
 
-// activateScript brings a pid to the front. choose is a bare Mach-O NSApplication
-// with no bundle, so LaunchServices never gives it activation when it is spawned
-// from a background process (an app launched from Finder, Spotlight or a hotkey).
-// NSRunningApplication needs no Accessibility permission, unlike System Events.
+// choose is a bare Mach-O NSApplication with no bundle, so LaunchServices never
+// gives it activation when it is spawned from an app launched by Finder, Spotlight
+// or a hotkey. NSRunningApplication needs no Accessibility permission to fix that.
 const activateScript = `ObjC.import('AppKit');
 function run(argv) {
 	var app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(parseInt(argv[0]));
-	// The window does not exist the instant the process starts, so keep trying briefly.
+	// The window does not exist the instant the process starts.
 	for (var i = 0; i < 20 && app && !app.isActive; i++) {
 		app.activateWithOptions(2); // NSApplicationActivateIgnoringOtherApps
 		$.NSThread.sleepForTimeInterval(0.05);
