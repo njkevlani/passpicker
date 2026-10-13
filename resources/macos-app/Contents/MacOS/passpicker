@@ -1,6 +1,0 @@
-#!/bin/sh
-# GUI launches get a bare PATH, so add the usual homes of choose, pass and gpg.
-# tree(1) needs a UTF-8 locale or `pass` lists an ASCII tree; GUI launches have neither.
-export LANG="${LANG:-en_US.UTF-8}"
-export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/go/bin:$PATH"
-exec "$(dirname "$0")/../Resources/passpicker"
