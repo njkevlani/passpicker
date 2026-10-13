@@ -4,6 +4,7 @@ package dmenu
 
 import (
 	"bytes"
+	"crypto/sha256"
 	_ "embed"
 	"fmt"
 	"os"
@@ -77,22 +78,21 @@ func getMacMenuPath() (string, error) {
 			}
 		}
 
-		// 2. Check user cache directory
 		home, _ := os.UserHomeDir()
 		cacheDir := filepath.Join(home, "Library", "Caches", "passpicker")
 		userCachedBin := filepath.Join(cacheDir, "macmenu")
+		userHashFile := filepath.Join(cacheDir, "macmenu.hash")
+		srcHash := fmt.Sprintf("%x", sha256.Sum256([]byte(macmenuSource)))
+
+		// 2. Check user cache directory with matching source hash
 		if fi, err := os.Stat(userCachedBin); err == nil && !fi.IsDir() && fi.Mode()&0111 != 0 {
-			cachedMacMenuPath = userCachedBin
-			return
+			if existingHash, err := os.ReadFile(userHashFile); err == nil && string(existingHash) == srcHash {
+				cachedMacMenuPath = userCachedBin
+				return
+			}
 		}
 
-		// 3. Check system PATH
-		if path, err := exec.LookPath("macmenu"); err == nil {
-			cachedMacMenuPath = path
-			return
-		}
-
-		// 4. Compile embedded Swift source on-the-fly using swiftc
+		// 3. Compile embedded Swift source on-the-fly using swiftc
 		if swiftc, err := exec.LookPath("swiftc"); err == nil {
 			if err := os.MkdirAll(cacheDir, 0755); err != nil {
 				macMenuInitErr = fmt.Errorf("failed to create cache dir: %w", err)
@@ -112,9 +112,17 @@ func getMacMenuPath() (string, error) {
 				return
 			}
 
+			_ = os.WriteFile(userHashFile, []byte(srcHash), 0644)
 			cachedMacMenuPath = userCachedBin
 			return
 		}
+
+		// 4. Check system PATH
+		if path, err := exec.LookPath("macmenu"); err == nil {
+			cachedMacMenuPath = path
+			return
+		}
+
 
 		// Fallback: Check if choose exists as fallback
 		if choose, err := exec.LookPath("choose"); err == nil {

@@ -17,6 +17,10 @@ class FloatingPanel: NSPanel {
 
             // Return / Enter (36) or Keypad Enter (76)
             if event.keyCode == 36 || event.keyCode == 76 {
+                // Ignore any Enter event queued before or during window launch (e.g. from Terminal/Spotlight)
+                if let readyTime = appController?.windowReadyTime, ProcessInfo.processInfo.systemUptime < readyTime {
+                    return
+                }
                 let isOption = event.modifierFlags.contains(.option)
                 appController?.acceptSelection(withOtp: isOption)
                 return
@@ -57,6 +61,22 @@ class FloatingPanel: NSPanel {
         }
 
         super.sendEvent(event)
+    }
+}
+
+// MARK: - Custom Table Row View (Selection Styling)
+class CustomTableRowView: NSTableRowView {
+    override func drawSelection(in dirtyRect: NSRect) {
+        if selectionHighlightStyle != .none {
+            let selectionRect = bounds.insetBy(dx: 4, dy: 1)
+            let path = NSBezierPath(roundedRect: selectionRect, xRadius: 6, yRadius: 6)
+            if isEmphasized {
+                NSColor.selectedContentBackgroundColor.setFill()
+            } else {
+                NSColor.unemphasizedSelectedContentBackgroundColor.setFill()
+            }
+            path.fill()
+        }
     }
 }
 
@@ -111,9 +131,14 @@ class ItemCellView: NSTableCellView {
         ])
     }
 
-    func configure(text: String, shortcutIndex: Int?, isSelected: Bool) {
-        titleLabel.stringValue = text
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet {
+            updateColors()
+        }
+    }
 
+    private func updateColors() {
+        let isSelected = (backgroundStyle == .emphasized)
         if isSelected {
             titleLabel.textColor = .selectedControlTextColor
             iconView.contentTintColor = .selectedControlTextColor
@@ -123,6 +148,11 @@ class ItemCellView: NSTableCellView {
             iconView.contentTintColor = .secondaryLabelColor
             badgeLabel.textColor = .tertiaryLabelColor
         }
+    }
+
+    func configure(text: String, shortcutIndex: Int?) {
+        titleLabel.stringValue = text
+        updateColors()
 
         // Icon based on item content
         if text.hasPrefix("+") {
@@ -176,6 +206,7 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
     var tableView: NSTableView!
     var scrollView: NSScrollView!
     var countLabel: NSTextField!
+    var windowReadyTime: TimeInterval = 0
 
     init(prompt: String, message: String, items: [String]) {
         self.promptTitle = prompt
@@ -190,6 +221,7 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         positionWindow()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        windowReadyTime = ProcessInfo.processInfo.systemUptime + 0.15
     }
 
     private func setupUI() {
@@ -252,15 +284,13 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         countLabel.alignment = .right
         headerView.addSubview(countLabel)
 
-        // Search field
+        // Search field (uses delegate only, no rogue action triggering)
         searchField = NSSearchField()
         searchField.translatesAutoresizingMaskIntoConstraints = false
         searchField.placeholderString = "Search entries or type to create..."
         searchField.font = NSFont.systemFont(ofSize: 13)
         searchField.focusRingType = .none
         searchField.delegate = self
-        searchField.target = self
-        searchField.action = #selector(searchChanged)
         visualEffect.addSubview(searchField)
 
         // Table View & Scroll View
@@ -273,6 +303,7 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         tableView.dataSource = self
         tableView.delegate = self
         tableView.target = self
+        tableView.action = #selector(rowClicked)
         tableView.doubleAction = #selector(rowDoubleClicked)
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("MainColumn"))
@@ -334,6 +365,9 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
 
         NSLayoutConstraint.activate(constraints)
 
+        window.initialFirstResponder = searchField
+        searchField.becomeFirstResponder()
+
         if !filteredItems.isEmpty {
             tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
         }
@@ -350,7 +384,7 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         let screenFrame = screen.visibleFrame
         let winSize = window.frame.size
 
-        // Position window horizontally centered at mouse, vertically just below mouse (or centered)
+        // Position window horizontally centered at mouse, vertically centered near mouse
         var x = mousePos.x - winSize.width / 2
         var y = mousePos.y - winSize.height / 2
 
@@ -391,7 +425,7 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
     func moveSelection(offset: Int) {
         guard !filteredItems.isEmpty else { return }
         let current = tableView.selectedRow
-        var next = current + offset
+        var next = (current < 0 ? 0 : current) + offset
         if next < 0 { next = 0 }
         if next >= filteredItems.count { next = filteredItems.count - 1 }
 
@@ -422,9 +456,16 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         cancel()
     }
 
+    @objc func rowClicked() {
+        guard tableView.clickedRow >= 0 && tableView.clickedRow < filteredItems.count else { return }
+        // Single click selects the row and keeps the popup open, waiting for Enter
+        tableView.selectRowIndexes(IndexSet(integer: tableView.clickedRow), byExtendingSelection: false)
+    }
+
     @objc func rowDoubleClicked() {
+        guard tableView.clickedRow >= 0 && tableView.clickedRow < filteredItems.count else { return }
         let isOption = NSEvent.modifierFlags.contains(.option)
-        acceptSelection(withOtp: isOption)
+        acceptIndex(tableView.clickedRow, withOtp: isOption)
     }
 
     private func finish(selection: String, withOtp: Bool) {
@@ -448,6 +489,16 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         return filteredItems.count
     }
 
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        let identifier = NSUserInterfaceItemIdentifier("CustomRowView")
+        var rowView = tableView.makeView(withIdentifier: identifier, owner: self) as? CustomTableRowView
+        if rowView == nil {
+            rowView = CustomTableRowView()
+            rowView?.identifier = identifier
+        }
+        return rowView
+    }
+
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let identifier = NSUserInterfaceItemIdentifier("ItemCell")
         var cell = tableView.makeView(withIdentifier: identifier, owner: self) as? ItemCellView
@@ -457,14 +508,8 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         }
 
         let item = filteredItems[row]
-        let isSelected = tableView.selectedRow == row
-        cell?.configure(text: item, shortcutIndex: row < 9 ? row : nil, isSelected: isSelected)
+        cell?.configure(text: item, shortcutIndex: row < 9 ? row : nil)
         return cell
-    }
-
-    func tableViewSelectionDidChange(_ notification: Notification) {
-        // Refresh cells to update selection colors
-        tableView.reloadData()
     }
 }
 
