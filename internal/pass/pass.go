@@ -32,7 +32,7 @@ func runPassCmd(args []string, stdinInput string) (string, error) {
 
 // GetPasswords runs the pass command to list all passwords and parses the tree output.
 func GetPasswords() ([]string, error) {
-	output, err := runPassCmd(nil, "")
+	output, err := runPassCmd([]string{"ls"}, "")
 	if err != nil {
 		return nil, err
 	}

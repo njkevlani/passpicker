@@ -63,3 +63,32 @@ func TestParseTreeASCII(t *testing.T) {
 		t.Errorf("Expected:\n%v\nGot:\n%v", expected, result)
 	}
 }
+
+// gopass tree output has trailing slashes on directory names and 'gopass' as root.
+func TestParseTreeGopass(t *testing.T) {
+	input := `gopass
+├── personal/
+│   ├── actcorp.in/
+│   │   └── 102701828364
+│   ├── cashkro
+│   └── equitas.bank.in/
+│       └── njkevlani
+└── sharechat/
+    ├── google.com/
+    │   └── nileshkevlani@sharechat.co
+    └── smartworks`
+
+	expected := []string{
+		"personal/actcorp.in/102701828364",
+		"personal/cashkro",
+		"personal/equitas.bank.in/njkevlani",
+		"sharechat/google.com/nileshkevlani@sharechat.co",
+		"sharechat/smartworks",
+	}
+
+	result := parseTree(input)
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected:\n%v\nGot:\n%v", expected, result)
+	}
+}
+

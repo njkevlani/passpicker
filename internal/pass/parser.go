@@ -52,7 +52,7 @@ func parseTree(output string) []string {
 
 		// The name starts after the prefix runes
 		name := string(runes[level*4:])
-		name = strings.TrimSpace(name)
+		name = strings.TrimSuffix(strings.TrimSpace(name), "/")
 		if name == "" {
 			continue
 		}
