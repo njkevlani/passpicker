@@ -222,6 +222,11 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         windowReadyTime = ProcessInfo.processInfo.systemUptime + 0.15
+
+        // Exit if passpicker dies, instead of lingering as an orphan forever.
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            if getppid() == 1 { exit(1) }
+        }
     }
 
     private func setupUI() {
@@ -230,12 +235,17 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
 
         window = FloatingPanel(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
-            styleMask: [.titled, .fullSizeContentView],
+            // nonactivatingPanel lets the panel take key focus even when macOS
+            // refuses to activate the app (activation is cooperative since macOS 14).
+            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         window.appController = self
         window.delegate = self
+        // NSPanel hides itself whenever the app is inactive; if activation was
+        // refused it would stay hidden, never become key, and never exit.
+        window.hidesOnDeactivate = false
         window.isFloatingPanel = true
         window.level = .floating
         window.titleVisibility = .hidden
@@ -480,6 +490,15 @@ class AppController: NSObject, NSApplicationDelegate, NSTableViewDataSource, NST
     }
 
     func windowDidResignKey(_ notification: Notification) {
+        // Right after launch, macOS may hand focus back to the previous app as
+        // the prior picker exits; reclaim it rather than treating it as a click-away.
+        if ProcessInfo.processInfo.systemUptime < windowReadyTime + 0.5 {
+            DispatchQueue.main.async {
+                self.window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            return
+        }
         // Dismiss if user clicks away
         cancel()
     }
